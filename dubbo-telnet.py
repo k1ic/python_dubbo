@@ -3,13 +3,16 @@
 Name: dubbo-telnet
 Author: k1ic
 
-Tested in python3.7
+Dubboed in python3.7
 """
 
 import json
 import telnetlib
 import socket
 import ast
+
+import concurrent.futures
+import urllib.request
 
 class Dubbo(telnetlib.Telnet):
 
@@ -35,6 +38,19 @@ class Dubbo(telnetlib.Telnet):
         data = json.loads(data.decode(Dubbo.coding, errors='ignore').split('\n')[0].strip())
         return data
 
+def call_dubbo(params):
+    host = '172.16.34.127'
+    port = 20880
+    timeout = 0.1 #单位秒
+
+    conn = Dubbo(host, port, timeout)
+
+    service = 'com.yzb.service.clientapi.api.HotfixApi'
+    method = 'getAlphaBeta'
+
+    result = conn.invoke(service, method, params)
+    return result
+
 def load_data(file_path):
     res = []
 
@@ -50,31 +66,13 @@ def load_data(file_path):
     return res
 
 if __name__ == '__main__':
-    host = '172.16.34.127'
-    port = 20880
-    timeout = 0.1 #单位秒
-    conn = Dubbo(host, port, timeout)
-
-    service = 'com.yzb.service.clientapi.api.HotfixApi'
-    method = 'getAlphaBeta'
-
-    json_data = {
-        "dataType":"peak"
-    }
-
     # cat ./params.list
     #{"dataType":"peak"}
     #{"dataType":"peak"}
     #{"dataType":"peak"}
-    args_list = load_data('./params.list')
-    #print(args_list)
+    request_data_list = load_data('./params.list')
 
-    for item in args_list:
-        result = conn.invoke(
-            service,
-            method,
-            item
-        )
-
-        print(item, result)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        for request, result in zip(request_data_list, executor.map(call_dubbo, request_data_list)):
+            print('request: %r,result: %r' % (request, result))
 
