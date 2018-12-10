@@ -3,7 +3,7 @@
 Name: dubbo-telnet
 Author: k1ic
 
-Dubboed in python3.7
+Tested in python3.7
 """
 
 import json
